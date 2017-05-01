@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8">
+    <style>
+      @import url(https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
+      @import url(https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic);
+      @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+
+      /*body { font-family: 'Droid Serif'; }*/
+      h1, h2, h3 {
+        font-family: 'Yanone Kaffeesatz';
+        font-weight: normal;
+      }
+      .remark-code, .remark-inline-code { font-family: 'Ubuntu Mono'; }
+    </style>
+  </head>
+  <body>
+    <textarea id="source" data-notes="^Note:">
+
+class: center, middle
+
+# Python 3
+
+Lumír Balhar (@lumirbalhar)
+
+lbalhar@redhat.com
+
+Python SW engineer at Red Hat
+
+---
+class: center, middle
+
+# First, let me ask you a few questions ...
+
+## ... rise your hand if you ...
+
+--
+
+## know Python 3
+
+--
+
+## wrote something in Python 3
+
+--
+
+## tried to port something from Python 2 to 3
+
+--
+
+## like experience gained during porting
+
+???
+Great! A lot of Python developers here with a lot of bad experiences with porting :D
+
+---
+class: center, middle
+
+# History of Python
+
+### Implementation started in 1989
+### First published version (0.9.0) in 1991
+
+Same year of release as **first Web page**, **first Linux kernel** (0.01) or **Visual basic**
+
+???
+Actually same as year of my birth, which cannot be a coincidence :D
+---
+class: center,  middle
+
+# Python 3
+
+### Release without backward compatibility
+
+### Released in 2008
+
+In the same year **GitHub** was founded, first mobile phone with **Android** (HTC Dream) was released and Intel announced the **Intel Atom** family of processors.
+
+???
+Drop of backwards compatibility may looked unresonable but I want to talk about reasons for this step today and I'll show you why this was a good idea.
+---
+class: center, middle
+
+# Why without *backward compatibility*?
+    
+???
+Python 3.0 was developed with the same philosophy as in prior versions. However, as Python had accumulated new and redundant ways to program the same task.
+--
+
+### "There should be one- and preferably only one -obvious way to do it"
+???
+This is one of the most important rule in zen of python and a lot of changes in Python itself are driven by this rule. If you don't know zen of python and want to read the rest, just do `import this` in the python console.
+---
+
+# Handling exceptions
+
+--
+
+#### Single exception
+
+```python
+try:
+    a = 1/0
+except ZeroDivisionError:
+    print "You can't divide by zero!"
+```
+???
+If I want to handle single exception without storing it in variable, it is quite simple.
+--
+
+#### Two exceptions
+
+```python
+try:
+    a = 1/"test"
+except ZeroDivisionError, TypeError:
+    print "You can't divide by zero or by string!"
+```
+???
+I can remember that there was comma to separate things in exceptions handling so it looks as a good idea to separate exceptions by comma. But does it work? No! It uses TypeError as a name of variable where exception will be stored
+--
+
+#### Correct way
+
+```python
+try:
+    a = 1/"test"
+except (ZeroDivisionError, TypeError), e:
+    print "You can't divide by zero or by string!"
+```
+???
+This is a correct way how to handle more than one exception type in one except statement and I am pretty sure that sytax with commas only could be confusing for new python user.
+---
+
+# New syntax in Python 3 bacported to 2.7 and 2.6
+
+```python
+try:
+    a = 1/"test"
+except (ZeroDivisionError, TypeError) as e:
+    print("You can't divide by zero or by string!")
+```
+???
+Situation described on previous slide is a good reason for changing syntax to be more straightforward than just commas so Python 3 came with `as` keyword as separator between exception types and variable name to store exception in.
+---
+
+# Exception chain in Python 3
+
+```python
+class FooException(Exception):
+    pass
+
+def d():
+    e()
+
+def e():
+    f()
+
+def f():
+    raise FooException("There's some problem ...")
+```
+
+```python
+import foo
+
+class BarException(Exception):
+    pass
+
+def a():
+    b()
+
+def b():
+    c()
+
+def c():
+    try:
+        foo.d()
+    except foo.FooException as e:
+        raise BarException(e)
+```
+???
+Imagine situation when you have this two modules foo and bar. Module bar imports module foo and tries to catch exception in food.d() function but during handling of this exception another exception occurs.
+---
+
+# Python 2 traceback
+
+```python
+raceback (most rTraceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "bar.py", line 7, in a
+    b()
+  File "bar.py", line 10, in b
+    c()
+  File "bar.py", line 16, in c
+    raise BarException(e)
+bar.BarException: There's some problem ...
+```
+???
+In Python 2 you have only this short traceback and it can be really hard to find bug in big codebase where one exceptions may occur during another exception handling.
+---
+
+# Python 3 traceback
+
+```python
+Traceback (most recent call last):
+  File "bar.py", line 14, in c
+    foo.d()
+  File "foo.py", line 5, in d
+    e()
+  File "foo.py", line 8, in e
+    f()
+  File "foo.py", line 11, in f
+    raise FooException("There's some problem ...")
+foo.FooException: There's some problem ...
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "bar.py", line 7, in a
+    b()
+  File "bar.py", line 10, in b
+    c()
+  File "bar.py", line 16, in c
+    raise BarException(e)
+bar.BarException: There's some problem ...
+```
+???
+In Python 3 you have a complete traceback with all exceptions raised.
+This behaviour is possible because in Python 3 exceptions is stored in one object copletely and this object contains name, type and complete traceback, so it is possible to create a chain of multiple exceptions which makes finding bug much easier.
+---
+
+# Sorting
+
+## using `cmp` keyword argument
+
+```python
+def compare(a, b):
+    """Comparison that ignores the first letter"""
+    return cmp(a[1:], b[1:])
+names = ['Adam', 'Donald', 'John']
+print(sorted(names, cmp=compare))
+```
+
+['Adam', 'John', 'Donald']
+???
+CMP keyword argument for .sort() method or sorted() function is here to compare two items during sorting. CMP funtion has a visible disadvantage because it is called every time when comparison of two items is needed during sorting. This may cause a performace problem when function for comparison is complex or the dataset is big.
+--
+
+## using `key` keyword argument
+
+```python
+def keyfunction(item):
+    """Key for comparison that ignores the first letter"""
+    return item[1:]
+names = ['Adam', 'Donald', 'John']
+print(sorted(names, key=keyfunction))
+```
+
+['Adam', 'John', 'Donald']
+???
+So there is another posibility how to achieve this. Key keyword argument is here to return key for each element. Visible advantage is that the function returning key has to be executed only once for every item during sorting.
+And because this two approaches do same task, cmp function and cmp keyword argument for .sort() method and sorted function has been removed in Python 3.
+---
+
+# Copmarison of objects
+
+```python
+class Orderable(object):
+
+    def __init__(self, firstname, lastname):
+        self.first = firstname
+        self.last = lastname
+
+    def __cmp__(self, other):
+        return cmp("%s, %s" % (self.last, self.first),
+                   "%s, %s" % (other.last, other.first))
+
+    def __repr__(self):
+        return "%s %s" % (self.first, self.last)
+
+sorted([Orderable('Donald', 'Duck'),
+        Orderable('Paul', 'Anka')])
+```
+
+[Paul Anka, Donald Duck]
+???
+There is one more thing which has been removed from Python 3 related to comparison and sorting - special `__cmp__` method for implementing comparison for your own objects.
+--
+
+#### What about objects that are neither “less than” nor “greater than”, but still can be “equal” or “not equal”? For exampla colors ...
+
+---
+
+# Rich comparison (since Python 2.1)
+
+* `__lt__` for **`<`**
+* `__le__` for **`<=`**
+* `__eq__` for **`==`**
+* `__ne__` for **`!=`**
+* `__gt__` for **`>`**
+* `__ge__` for **`>=`**
+???
+Because for special cases you may want to implement only some of comparions operators, rich comparison is in Python since version 2.1. And again we have more than one way how to implement comparion so the `__cmp__` method has been removed.
+--
+
+### Another violation of Zen of Python principes!
+
+--
+
+### In Python 3 the support for `__cmp__()` has been removed.
+
+---
+class: center, middle
+
+# Data formats
+
+???
+All of you know a lot of data formats for different file types. For example
+--
+
+## Images
+
+JPG, PNG, BMP
+
+--
+
+## Videos
+
+AVI, MP4, MKV
+
+--
+
+## Music
+
+MP3, OGG, WAV
+???
+Data format is just a way how to store data byte by byte on disk or how to send the data throw network.
+--
+
+## Text?
+???
+But what about text? For a lot of developers text are only sequence of bytes but is that true?
+
+---
+class: center, middle
+
+# You can pretend that text is only sequence of ascii chars (bytes) and store it as is
+
+--
+
+# but you cannot ignore emojis 😎
+
+--
+
+# because it makes you users 😢
+
+--
+
+# or worse 😠
+
+---
+class: center, middle
+
+# Plain text only world is a myth
+
+## Python 3 contains
+
+### Unicode type for text
+
+### Byte type for data
+???
+Because Python upstream developers know that text is much more than only bytes, Python 3 contains two different types - unicde for text and bytes for raw data. This may be a most important part of porting codebase to Python 3 because you have to decide if you want to store data or text in variable. This is also a hard nut to crack during porting samba because you need to understand the code very well before you can decide which type is better.
+---
+class: middle
+
+# Changes in standard library
+
+--
+
+| Name         | Python 2 name          | Python 3 name |
+|--------------|------------------------|---------------|
+| builtins     | `__builtin__`          | builtins      |
+| configparser | `ConfigParser`         |`configparser` |
+| cStringIO    | `cStringIO.StringIO()` |`io.StringIO`  |
+| input        | `raw_input()`          | `input()`     |
+| range        | `xrange()`             |`range()`      |
+| reduce       | `reduce()`             |`functools.reduce()` |
+
+???
+There are also a lot of changes in standard library names. This table is just an example of a few changed names.
+---
+class: center, middle
+
+# Conservative porting guide
+
+## [portingguide.readthedocs.io](http://portingguide.readthedocs.io/en/latest/)
+
+???
+Conservative porting guide is online documentation projet contains a lot of interesting information about supporting codebase for Python 2 and Python 3 and also a guide how to use python-modernize tool to make you code more compatible.
+---
+class: center, middle
+
+# Porting strategies
+???
+Ok, now you know that you really want to support Python 3 and you probably cannot drop support for Python 2 in one day. So there are some strategies how to achieve this goal.
+--
+
+## Support only Python 3
+
+--
+
+## Maintain separated codebase (branches)
+
+--
+
+## Convert with 2to3 or 3to2
+
+--
+
+## Write compatible code
+
+---
+class: center, middle
+
+# `six` library
+
+## [pythonhosted.org/six/](https://pythonhosted.org/six/)
+
+### simple utilities for wrapping over differences between Python 2 and 3
+
+### 2 * 3 == 6
+???
+When you want to write compatible code, sonner or later you will need Six. Six is a Python library which may help you a lot during writing compatible code. Six contains only one Python file with a lot of handy variables and wrappers.
+---
+class: center, middle
+
+# Let's go deeper
+
+--
+
+# to Python C extensions
+???
+We decided to use Python for comfortable writing readable code so why anybody would want to write Python modules in C?
+---
+class: center, middle
+
+# Why?
+
+--
+
+## Because you want to use existing C code in Python app or you need more performace
+
+--
+
+# How?
+
+--
+
+## Cython, CFFI, Python C API
+???
+Why C API is on the last position? I'll describe it after a while but now you have to know that Cython is not only the simplient way how to create Python C extensions but it is a preferred way by Python upstream developers.
+---
+class: center, middle
+# Python C API incompatible changes
+
+--
+
+## Modules initialization
+
+--
+
+## Objects initialization
+
+--
+
+## Python int object wasn't renamed to long
+
+--
+
+## Comparison related changes
+
+## etc
+
+---
+
+# Module initialization
+???
+Modules initialization is a good example how big difference is between Python 2 and 3 C API and how complicated may be to support both version in one code.
+--
+
+## Python 2
+
+```c
+m = Py_InitModule3("themodulename", module_functions, "This is a module");
+```
+???
+In Python 2 there is a simple function to initialize module.
+--
+
+## Python 3
+
+```c
+m = PyModule_Create(&moduledef);
+```
+???
+But in Python 3 you have to pass special structure to new function to initialize module.
+--
+
+```c
+static struct PyModuleDef moduledef = {
+    PyModuleDef_HEAD_INIT,
+    .m_name = "themodulename",
+    .m_doc = "This is a module.",
+    .m_size = -1,
+    .m_methods = module_functions,
+};
+```
+
+---
+class: center, middle
+
+# Project py3c
+???
+But don't be scared. Help is coming :D
+
+--
+
+## `six` for Python C extenstions
+
+### [github.com/encukou/py3c](https://github.com/encukou/py3c)
+???
+Project py3c is something like six library for C extensions. This contains a set od macros to rename some incompatible names and create non existing once for Python C API and was created by Petr specially for Samba but after that it looked like this could be usefull for other projects so Py3c is released as separated project and we use small subset of py3c in Samba.
+---
+class: center, middle
+
+# Thank you!
+
+--
+
+# Questions?
+
+    </textarea>
+    <script src="https://remarkjs.com/downloads/remark-latest.min.js">
+    </script>
+    <script>
+      var slideshow = remark.create();
+    </script>
+  </body>
+</html>
