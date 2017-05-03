@@ -83,6 +83,45 @@ Python 3.0 was developed with the same philosophy as in prior versions. However,
 This is one of the most important rule in zen of python and a lot of changes in Python itself are driven by this rule. If you don't know zen of python and want to read the rest, just do `import this` in the python console.
 ---
 
+# `print`
+
+--
+
+## Python 2
+
+```python
+print "Hello world"
+```
+
+--
+
+## Python 3
+
+```python
+print("Hello world")
+```
+---
+
+# More complex `print`
+
+--
+
+## Python 2
+
+```python
+print >> sys.stderr, 'Hello world',
+```
+
+--
+
+## Python 3
+
+```python
+print("Hello world", end="", file=sys.stderr)
+```
+
+---
+
 # Handling exceptions
 
 --
